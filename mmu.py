@@ -48,7 +48,72 @@ class MMU():
         MMU._rom = list(b.read());
         MMU._carttype = MMU._rom[0x0147];
         print("MMU,ROM loaded")
-
+    def rb(addr):
+        addrF = addr&0xF000;    #addrF确定访问内存的区块
+        if(addrF == 0x0000):  #addr&0xF000 将addr分块
+            if(MMU._inbios):
+                if(addr<0x0100):
+                    return MMU._bios[addr];
+                elif(Z80._r.pc == 0x0100):
+                    MMU._inbios = 0;
+                    print("MMU Leaving BIOS");
+            else:
+                return MMU._rom[addr];
+        elif(0x1000<=addrF<=0x3000):    #rom
+            return MMU._rom[addr];
+        elif(0x4000<=addrF<=0x7000):    #rom bank 1
+            return MMU._rom[MMU._romoffs+(addr&0x3FFF)];
+        elif(0x8000<=addrF<=0x9000):    #vram
+            #return GPU._vram[addr&0x1FFF];
+            return 0xFF;
+        elif(0xA000<=addrF<=0xB000):    #External RAM
+            return MMU._eram[MMU._ramoffs+(addr&0x1FFF)];
+        elif(0xC000<=addrF<=0xE000):    #Work RAM and echo
+            return MMU._wram[addr&0x1FFF];
+        elif(addrF==0xF000):
+            #Echo RAM
+            if(0x000<=addr&0x0F00<=0xD00):
+                return MMU.wram[addr&0x1FFF];
+            elif(addr&0x0F00==0xE00):   #OAM
+                if(addr < 0xFEA0):
+                    #return GPU._oam[addr & 0xFF];
+                    return 0xFF;
+                else:
+                    return 0;
+            elif(addr&0x0F00==0xF00):   #Zero-page
+                if(addr >= 0xFF80):
+                    return MMU._zram[addr & 0x7F]
+                else:
+                    #I/O control handing
+                    return 0;
+    def rw(addr):
+        return MMU.rb(addr)+(MMU.rb(addr+1)<<8);
+    def wb(addr,val):
+        addrF = addr&0xF000;    #addrF确定访问内存的区块
+        if(0x0000<=addrF<=0x1000):
+            if(MMU._carttype):
+                if(((val&0xF)==0xA)):
+                    MMU._mbc[1]['ramon']=1;
+                else:
+                    MMU._mbc[1]['ramon']=0;
+        if(0x2000<=addrF<=0x3000):
+            if(MMU._carttype):
+                MMU._mbc[1]['rombank'] &=0x60;
+                val &=0x1F;
+                if(!val): val=1;
+                MMU._mbc[1]['rombank'] |= val;
+                MMU._romoffs = MMU._mbc[1].rombank * 0x4000;
+        if(0x4000<=addrF<=0x5000):
+            if(MMU._carttype):
+                if(MMU._mbc[1]['mode']):
+                    MMU._mbc[1]['rambank']=(val&3);
+                    MMU._ramoffs = MMU._mbc[1].rambank * 0x2000;
+                else:
+                    MMU._mbc[1]['rombank'] &=0x1F;
+                    MMU._mbc[1]['rombank'] |= ((val&3)<<5);
+                    MMU._romoffs = MMU._mbc[1].rombank * 0x4000;
+    def ww(addr,val):
+        MMU.wb(addr,val&255);MMU.wb(addr+1,val>>8);
 #MMU._mbc[1]['rombank'] = 1;
-MMU.load("opus5.gb")
+#MMU.load("opus5.gb")
 print(MMU._carttype);
