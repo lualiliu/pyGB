@@ -100,7 +100,7 @@ class MMU():
             if(MMU._carttype):
                 MMU._mbc[1]['rombank'] &=0x60;
                 val &=0x1F;
-                if(!val): val=1;
+                if(not val): val=1;
                 MMU._mbc[1]['rombank'] |= val;
                 MMU._romoffs = MMU._mbc[1].rombank * 0x4000;
         if(0x4000<=addrF<=0x5000):
