@@ -96,14 +96,14 @@ class MMU():
                     MMU._mbc[1]['ramon']=1;
                 else:
                     MMU._mbc[1]['ramon']=0;
-        if(0x2000<=addrF<=0x3000):
+        elif(0x2000<=addrF<=0x3000):
             if(MMU._carttype):
                 MMU._mbc[1]['rombank'] &=0x60;
                 val &=0x1F;
                 if(not val): val=1;
                 MMU._mbc[1]['rombank'] |= val;
                 MMU._romoffs = MMU._mbc[1].rombank * 0x4000;
-        if(0x4000<=addrF<=0x5000):
+        elif(0x4000<=addrF<=0x5000):
             if(MMU._carttype):
                 if(MMU._mbc[1]['mode']):
                     MMU._mbc[1]['rambank']=(val&3);
@@ -112,6 +112,31 @@ class MMU():
                     MMU._mbc[1]['rombank'] &=0x1F;
                     MMU._mbc[1]['rombank'] |= ((val&3)<<5);
                     MMU._romoffs = MMU._mbc[1].rombank * 0x4000;
+        elif(0x6000<=addrF<=0x7000):
+            if(MMU._carttype):
+                MMU._mbc[1].mode = val&1;
+        #elif(0x8000<=addrF<=0x9000):
+            #GPU._vram[addr&0x1FFF] = val;
+            #GPU.updatetile(addr&0x1FFF,val);
+            
+        elif(0xA000<=addrF<=0xB000):
+            MMU._eram[MMU._ramoffs+(addr&0x1FFF)] = val;
+        elif(0xC000<=addrF<=0xE000):
+            MMU._wram[addr&0x1FFF] = val;
+        elif(addrF==0xF000):
+            if(0x000<=addr&0x0FFF<=0xD00):
+                MMU._wram[addr&0x1FFF] = val;
+            #elif(addr&0x0FFF == 0xE00):
+
+        elif(addrF==0xF00):
+            if(addr == 0xFFFF):
+                MMU._ie = val;
+            elif(addr > 0xFF7F):
+                MMU._zram[addr&0x7F] = val;
+            else:
+                if(addr&0xF0==0x00):
+                    if(addr&0xF==15):
+                        MMU._if = val;
     def ww(addr,val):
         MMU.wb(addr,val&255);MMU.wb(addr+1,val>>8);
 #MMU._mbc[1]['rombank'] = 1;
